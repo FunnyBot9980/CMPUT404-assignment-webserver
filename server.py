@@ -1,6 +1,6 @@
 #  coding: utf-8 
 import socketserver
-
+from email.parser import BytesParser
 # Copyright 2023 Abram Hindle, Eddie Antonio Santos, John Macdonald
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,19 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
+        # print ("Got a request of: %s\n" % self.data)
+        
+        
+        request_line, headers_alone = self.data.split(b'\r\n', 1)
+        headers_alone = BytesParser().parsebytes(headers_alone)
+        # print(request_line)
+        # print(headers_alone) 
+        
+        method, path, version = request_line.decode().split(" ")
+        print("Method: ", method)
+        print("Path: ", path)
+        print("Http Version: ", version)
+
         self.request.sendall(bytearray("OK",'utf-8'))
 
 if __name__ == "__main__":
