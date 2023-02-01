@@ -53,7 +53,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.response += f"\r\n"
             self.send_response()
             return
-         
+        
         if method == 'GET':
             self.for_get(path)
             
@@ -63,16 +63,18 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def for_get(self, path):
         root = './www'
+        abs_path = root + os.path.abspath(path)
         if path[-1] == '/':
             path += 'index.html'
         full_path = root + path
-        
-        if os.path.exists(full_path):
-            
+        # print(os.path.exists(full_path))
+        if os.path.exists(abs_path):
+            # print("exists")
+
             if os.path.isdir(full_path):
-                path += '/'
+                # print("dir exists")
                 self.header_handler('Moved Permanently')
-                self.response += f"Location: http://127.0.0.1:8080{path}\r\n"
+                self.response += f"Location: http://127.0.0.1:8080{path}/\r\n"
                 self.response += f"\r\n"
                 return
             else:
@@ -91,6 +93,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.header_handler('Not Found')
             self.response += f"\r\n"
         
+    
     
     
     def valid_method(self, method):
