@@ -53,9 +53,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.response += f"\r\n"
             self.send_response()
             return
-        
-        if path[-1] == '/':
-            path += 'index.html'
          
         if method == 'GET':
             self.for_get(path)
@@ -66,19 +63,30 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def for_get(self, path):
         root = './www'
+        if path[-1] == '/':
+            path += 'index.html'
         full_path = root + path
         
         if os.path.exists(full_path):
-            with open(full_path, 'r') as f:
-                contents = f.read()
             
-            self.header_handler('Ok')
-            if full_path.endswith(".html"):
-                self.response += "Content-Type: text/html\r\n"
-            elif full_path.endswith(".css"):
-                self.response += "Content-Type: text/css\r\n"
-            self.response += f"\r\n"
-            self.response += contents    
+            if os.path.isdir(full_path):
+                path += '/'
+                self.header_handler('Moved Permanently')
+                self.response += f"Location: http://127.0.0.1:8080{path}\r\n"
+                self.response += f"\r\n"
+                return
+            else:
+                with open(full_path, 'r') as f:
+                    contents = f.read()
+                
+                self.header_handler('Ok')
+                if full_path.endswith(".html"):
+                    self.response += "Content-Type: text/html\r\n"
+                elif full_path.endswith(".css"):
+                    self.response += "Content-Type: text/css\r\n"
+                self.response += f"\r\n"
+                self.response += contents   
+                
         else:
             self.header_handler('Not Found')
             self.response += f"\r\n"
@@ -105,6 +113,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def send_response(self):
         self.request.sendall(bytearray(self.response, 'utf-8'))
         
+
+
 
 
 if __name__ == "__main__":
