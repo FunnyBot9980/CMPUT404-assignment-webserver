@@ -1,6 +1,7 @@
 #  coding: utf-8 
 import socketserver
 from email.parser import BytesParser
+import os
 # Copyright 2023 Abram Hindle, Eddie Antonio Santos, John Macdonald
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,19 +33,34 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         # print ("Got a request of: %s\n" % self.data)
+        method, path = self.parse_request_data(self.data)
+       
+        print(method)
+        print(path)
         
+        # f = open('index.html', 'rb')
+        # contents = f.read()
+        # f.close()
+ 
+        # body = 
         
-        request_line, headers_alone = self.data.split(b'\r\n', 1)
-        headers_alone = BytesParser().parsebytes(headers_alone)
-        # print(request_line)
-        # print(headers_alone) 
-        
-        method, path, version = request_line.decode().split(" ")
-        print("Method: ", method)
-        print("Path: ", path)
-        print("Http Version: ", version)
+        # self.request.send(result.encode('utf-8'))
 
+        # response = b"HTTP/1.1 200 OK\r\n"
+        # response += b"Content-Type: text/html\r\n"
+        # response += b"\r\n"
+        # response += contents
+        
+        # self.request.sendall(response)
         self.request.sendall(bytearray("OK",'utf-8'))
+        
+    def parse_request_data(self, request_data):
+        request_line, headers = request_data.split(b'\r\n', 1)
+        # headers = BytesParser().parsebytes(headers)
+        method, path, http_version = request_line.decode('utf-8').split(" ")
+        
+        return (method, path)
+        
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
