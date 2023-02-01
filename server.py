@@ -38,21 +38,25 @@ class MyWebServer(socketserver.BaseRequestHandler):
         print(method)
         print(path)
         
-        # f = open('index.html', 'rb')
-        # contents = f.read()
-        # f.close()
- 
-        # body = 
+        # serving index.html from ./www
+        root = './www'
+        if path[-1] == '/':
+            path += 'index.html'
+        with open(root+path, 'rb') as f:
+            contents = f.read()
+            
+        response = b"HTTP/1.1 200 OK\r\n"
+        response += b"Content-Type: text/html\r\n"
+        response += b"\r\n"
+        response += contents
+        self.request.sendall(response)
         
-        # self.request.send(result.encode('utf-8'))
-
-        # response = b"HTTP/1.1 200 OK\r\n"
-        # response += b"Content-Type: text/html\r\n"
-        # response += b"\r\n"
-        # response += contents
+        # self.request.sendall(bytearray("OK",'utf-8'))
         
-        # self.request.sendall(response)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        
+        
+        
+        
         
     def parse_request_data(self, request_data):
         request_line, headers = request_data.split(b'\r\n', 1)
