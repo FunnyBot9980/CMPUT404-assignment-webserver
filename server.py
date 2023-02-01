@@ -1,6 +1,5 @@
 #  coding: utf-8 
 import socketserver
-from email.parser import BytesParser
 import os
 # Copyright 2023 Abram Hindle, Eddie Antonio Santos, John Macdonald
 # 
@@ -27,6 +26,8 @@ import os
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+# http method to account for: GET, PUT, POST, OPTIONS, HEAD, DELETE
+# https response codes: OK - 200, MOVED - 301, BAD REQUEST - 400, NOT_FOUND - 404, METHOD NOT ALLOWED - 405
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
@@ -34,37 +35,64 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         # print ("Got a request of: %s\n" % self.data)
         method, path = self.parse_request_data(self.data)
+        # print(method)
+        # print(path)
        
-        print(method)
-        print(path)
+        # check if valid method (hardcoded for now) 
+        if not self.valid_method(method):
+            response = b"HTTP/1.1 405 Method Not Allowed\r\n"
+            self.request.sendall(response)
+            return
         
-        # serving index.html from ./www
-        root = './www'
         if path[-1] == '/':
             path += 'index.html'
-        with open(root+path, 'rb') as f:
-            contents = f.read()
+         
+        if method == 'GET':
+            response = self.for_get(path)
             
-        response = b"HTTP/1.1 200 OK\r\n"
-        response += b"Content-Type: text/html\r\n"
-        response += b"\r\n"
-        response += contents
-        self.request.sendall(response)
+        if response != None:  
+            self.request.sendall(response)
         
-        # self.request.sendall(bytearray("OK",'utf-8'))
+    
+    
+    
+    def for_get(self, path):
+        root = './www'
+        full_path = root + path
         
+        if os.path.exists(full_path):
+            with open(full_path, 'rb') as f:
+                contents = f.read()
+            
+            response = b"HTTP/1.1 200 OK\r\n"
+            if full_path.endswith(".html"):
+                response += b"Content-Type: text/html\r\n"
+            elif full_path.endswith(".css"):
+                response += b"Content-Type: text/css\r\n"
+            response += b"\r\n"
+            response += contents 
+            return response   
+        else:
+            return b"HTTP/1.1 404 Not Found\r\n\r\n"
         
-        
+    
+    
+    def valid_method(self, method):
+        if method == 'GET':
+            return True
+        else:
+            return False
         
         
         
     def parse_request_data(self, request_data):
         request_line, headers = request_data.split(b'\r\n', 1)
-        # headers = BytesParser().parsebytes(headers)
         method, path, http_version = request_line.decode('utf-8').split(" ")
         
         return (method, path)
         
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
