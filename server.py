@@ -1,6 +1,6 @@
 #  coding: utf-8 
 import socketserver
-
+import os
 # Copyright 2023 Abram Hindle, Eddie Antonio Santos, John Macdonald
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,13 +26,99 @@ import socketserver
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+# http method to account for: GET, PUT, POST, OPTIONS, HEAD, DELETE
+# https response codes: OK - 200, MOVED - 301, BAD REQUEST - 400, NOT_FOUND - 404, METHOD NOT ALLOWED - 405
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
+    response = ""
+    
+    codes = {
+        'Ok': 200,
+        'Moved Permanently': 301,
+        'Bad Request': 400,
+        'Not Found': 404,
+        'Method Not Allowed': 405
+    }
+    
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        # print ("Got a request of: %s\n" % self.data)
+        method, path = self.parse_request_data(self.data)
+        # print(method)
+        # print(path)
+       
+        if not self.valid_method(method):
+            self.header_handler('Method Not Allowed')
+            self.response += f"\r\n"
+            self.send_response()
+            return
+        
+        if method == 'GET':
+            self.for_get(path)
+            
+        self.send_response()
+        
+    
+    
+    def for_get(self, path):
+        root = './www'
+        abs_path = root + os.path.abspath(path)
+        if path[-1] == '/':
+            path += 'index.html'
+        full_path = root + path
+        # print(os.path.exists(full_path))
+        if os.path.exists(abs_path):
+            # print("exists")
+
+            if os.path.isdir(full_path):
+                # print("dir exists")
+                self.header_handler('Moved Permanently')
+                self.response += f"Location: http://127.0.0.1:8080{path}/\r\n"
+                self.response += f"\r\n"
+                return
+            else:
+                with open(full_path, 'r') as f:
+                    contents = f.read()
+                
+                self.header_handler('Ok')
+                if full_path.endswith(".html"):
+                    self.response += "Content-Type: text/html\r\n"
+                elif full_path.endswith(".css"):
+                    self.response += "Content-Type: text/css\r\n"
+                self.response += f"\r\n"
+                self.response += contents   
+                
+        else:
+            self.header_handler('Not Found')
+            self.response += f"\r\n"
+        
+    
+    
+    
+    def valid_method(self, method):
+        if method == 'GET':
+            return True
+        else:
+            return False
+        
+          
+    def parse_request_data(self, request_data):
+        request_line, headers = request_data.split(b'\r\n', 1)
+        method, path, http_version = request_line.decode('utf-8').split(" ")
+        return (method, path)
+    
+    
+    def header_handler(self, code):
+        self.response = f"HTTP/1.1 {self.codes[code]} {code}\r\n"
+        
+        
+    def send_response(self):
+        self.request.sendall(bytearray(self.response, 'utf-8'))
+        
+
+
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
