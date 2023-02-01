@@ -31,6 +31,16 @@ import os
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
+    response = ""
+    
+    codes = {
+        'Ok': 200,
+        'Moved Permanently': 301,
+        'Bad Request': 400,
+        'Not Found': 404,
+        'Method Not Allowed': 405
+    }
+    
     def handle(self):
         self.data = self.request.recv(1024).strip()
         # print ("Got a request of: %s\n" % self.data)
@@ -38,22 +48,20 @@ class MyWebServer(socketserver.BaseRequestHandler):
         # print(method)
         # print(path)
        
-        # check if valid method (hardcoded for now) 
         if not self.valid_method(method):
-            response = b"HTTP/1.1 405 Method Not Allowed\r\n"
-            self.request.sendall(response)
+            self.header_handler('Method Not Allowed')
+            self.response += f"\r\n"
+            self.send_response()
             return
         
         if path[-1] == '/':
             path += 'index.html'
          
         if method == 'GET':
-            response = self.for_get(path)
+            self.for_get(path)
             
-        if response != None:  
-            self.request.sendall(response)
+        self.send_response()
         
-    
     
     
     def for_get(self, path):
@@ -61,19 +69,19 @@ class MyWebServer(socketserver.BaseRequestHandler):
         full_path = root + path
         
         if os.path.exists(full_path):
-            with open(full_path, 'rb') as f:
+            with open(full_path, 'r') as f:
                 contents = f.read()
             
-            response = b"HTTP/1.1 200 OK\r\n"
+            self.header_handler('Ok')
             if full_path.endswith(".html"):
-                response += b"Content-Type: text/html\r\n"
+                self.response += "Content-Type: text/html\r\n"
             elif full_path.endswith(".css"):
-                response += b"Content-Type: text/css\r\n"
-            response += b"\r\n"
-            response += contents 
-            return response   
+                self.response += "Content-Type: text/css\r\n"
+            self.response += f"\r\n"
+            self.response += contents    
         else:
-            return b"HTTP/1.1 404 Not Found\r\n\r\n"
+            self.header_handler('Not Found')
+            self.response += f"\r\n"
         
     
     
@@ -83,15 +91,20 @@ class MyWebServer(socketserver.BaseRequestHandler):
         else:
             return False
         
-        
-        
+          
     def parse_request_data(self, request_data):
         request_line, headers = request_data.split(b'\r\n', 1)
         method, path, http_version = request_line.decode('utf-8').split(" ")
-        
         return (method, path)
+    
+    
+    def header_handler(self, code):
+        self.response = f"HTTP/1.1 {self.codes[code]} {code}\r\n"
         
-
+        
+    def send_response(self):
+        self.request.sendall(bytearray(self.response, 'utf-8'))
+        
 
 
 if __name__ == "__main__":
